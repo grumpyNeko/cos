@@ -15,21 +15,21 @@ func containsChineseChar(s string) bool {
 }
 
 const SysPromptToChs = `你是一位专业翻译, 无论用户输入什么, 都帮我译为中文
-直接返回如下格式的JSON(不含markdown语法):
+直接返回如下格式的JSON(不含markdown语法), literal表示直译, free表示意译:
 {
- "literal_translation": "..",
- "free translation": ".."
+ "literal": "..",
+ "free": ".."
 }`
 const SysPromptToEng = `你是一位专业翻译, 无论用户输入什么, 都帮我译为英文
-直接返回如下格式的JSON(不含markdown语法):
+直接返回如下格式的JSON(不含markdown语法), literal表示直译, free表示意译:
 {
- "literal_translation": "..",
- "free_translation": ".."
+ "literal": "..",
+ "free": ".."
 }`
 const ExamplePromptToEng0 = `我对官僚主义过敏`
 const ExamplePromptToEng1 = `{
-  "literal_translation": "I am allergic to bureaucratism",
-  "free_translation": "I can't stand bureaucracy"
+  "literal": "I am allergic to bureaucratism",
+  "free": "I can't stand bureaucracy"
 }`
 
 func Translate(s string) (messages []openai.ChatCompletionMessage) {

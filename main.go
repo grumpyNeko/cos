@@ -2,6 +2,7 @@ package main
 
 import (
 	"cos/conf"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	openai "github.com/sashabaranov/go-openai"
 	"net/http"
@@ -59,12 +60,13 @@ func NewRouter() *gin.Engine {
 					ReasoningEffort: "minimal",
 				},
 			)
-			// TODO: assert json
-			payload := string(MustMarshal(TestMaskPayload{
-				M0: Resp(llmRes),
-				M1: "extra info",
-			}))
-			println(payload)
+			type translateLLMResponse struct {
+				Literal string `json:"literal"`
+				Free    string `json:"free"`
+			}
+			payload := translateLLMResponse{}
+			MustUnmarshal([]byte(Resp(llmRes)), &payload)
+			println(fmt.Sprintf("%+v", payload))
 			context.JSON(http.StatusOK, openai.ChatCompletionResponse{
 				ID:      "",
 				Object:  "",
@@ -75,7 +77,7 @@ func NewRouter() *gin.Engine {
 						Index: 0,
 						Message: openai.ChatCompletionMessage{
 							Role:    "assistant",
-							Content: payload,
+							Content: string(MustMarshal(payload)),
 						},
 						FinishReason: "",
 					},
