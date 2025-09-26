@@ -2,7 +2,6 @@ package main
 
 import (
 	"cos/conf"
-	"fmt"
 	"github.com/gin-gonic/gin"
 	openai "github.com/sashabaranov/go-openai"
 	"net/http"
@@ -103,13 +102,13 @@ func argueHandler(context *gin.Context) {
 		panic(`s.MaskName != "argue"`)
 	}
 
-	session, ok := sessionStore[s.SessionId]
-	if !ok {
-		println(fmt.Sprintf(`sessionid=%s not found in sessionStore`, s.SessionId))
-		session = Session{msgList: make([]string, 16)}
-	}
-	session.msgList = append(session.msgList, arg.Messages[len(arg.Messages)-1].Content)
-	sessionStore[s.SessionId] = session
+	//session, ok := sessionStore[s.SessionId]
+	//if !ok {
+	//	println(fmt.Sprintf(`sessionid=%s not found in sessionStore`, s.SessionId))
+	//	session = Session{msgList: make([]string, 16)}
+	//}
+	//session.msgList = append(session.msgList, arg.Messages[len(arg.Messages)-1].Content)
+	//sessionStore[s.SessionId] = session
 	llmRes := MustLLM(
 		"https://aihubmix.com/v1/chat/completions",
 		"sk-4JGSa4uexQfH6VIjD366C77c11F74bC6Bd919dEb6055Dd31",
