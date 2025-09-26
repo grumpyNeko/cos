@@ -15,13 +15,13 @@ func containsChineseChar(s string) bool {
 }
 
 const SysPromptToChs = `你是一位专业翻译, 无论用户输入什么, 都帮我译为中文
-直接返回如下格式的JSON(不含markdown语法), literal表示直译, free表示意译:
+直接返回如下格式的JSON(不含markdown语法), literal字段是直译结果, free字段是意译结果:
 {
  "literal": "..",
  "free": ".."
 }`
 const SysPromptToEng = `你是一位专业翻译, 无论用户输入什么, 都帮我译为英文
-直接返回如下格式的JSON(不含markdown语法), literal表示直译, free表示意译:
+直接返回如下格式的JSON(不含markdown语法), literal字段是直译结果, free字段是意译结果:
 {
  "literal": "..",
  "free": ".."

@@ -59,6 +59,10 @@ A: 唯心
 B: 制度是客观的
 `
 
+type Session struct {
+	msgList []string
+}
+
 var history = []string{
 	`A: 没有发生性关系就不算男女朋友, 因为和普通朋友没有本质区别`,
 	`B: 将性关系作为唯一标准并不成立：例如有些异地情侣长期未发生性关系，但仍有排他性的情感承诺、共同规划与相互照料，这些已明显区别于普通朋友。恋爱关系可由明确的双向承诺、情感依附和专属互动界定，而非是否发生性行为。若按你的标准，所有纯精神恋爱或先恋爱后婚后性行为的伴侣都无法被认定为恋人，这与现实中大量案例相矛盾。`,
@@ -92,6 +96,8 @@ var history = []string{
 	`A: 这是唯心的`,
 	`B: 反例：移民配偶签、公司伴侣福利、医院探视与病情告知权限等制度性差异并非“唯心”，同样的两人若被认定为伴侣可享受，称作朋友则不行。仅以“唯心”无法解释这些客观制度后果`,
 }
+
+var sessionStore = make(map[string]Session)
 
 func Argue(s []openai.ChatCompletionMessage) []openai.ChatCompletionMessage {
 	if s[0].Role != openai.ChatMessageRoleSystem {
