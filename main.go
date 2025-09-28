@@ -218,9 +218,9 @@ func argueHandler(context *gin.Context) {
 				Message: openai.ChatCompletionMessage{
 					Role: "assistant",
 					Content: string(MustMarshal(finalResp{
-						UserMsgEng: genResp.UserMsgEng,
-						ReplyEng:   refineResp.Reply1Eng,
-						ReplyChs:   refineResp.Reply1Chs,
+						//UserMsgEng: genResp.UserMsgEng,
+						ReplyEng: refineResp.Reply1Eng,
+						ReplyChs: refineResp.Reply1Chs,
 					})),
 				},
 				FinishReason: "",
