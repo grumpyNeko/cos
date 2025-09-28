@@ -23,10 +23,10 @@ user_msg_eng = translate(user_msg)
 debate_mode = 最新user_msg是否需要反驳
 reply_len = 需回复几句话, 最多为3
 if debate_mode
-  reply = 反驳或反问(debate_rules)
+  reply_eng = 反驳或反问(debate_rules)
 else
-  reply = 正常回复
-
+  reply_eng = 正常回复
+reply_chs = translate(reply_eng)
 ---
 历史对话=%s
 注意事项=%s
@@ -36,7 +36,8 @@ else
   "user_msg_eng": "..",
   "debate_mode": true,
   "reply_len": 2,
-  "reply": "..",
+  "reply_eng": "..",
+  "reply_chs": "..",
 }
 `
 
@@ -110,7 +111,10 @@ var forceList = []string{
 }
 
 func HistoryToString() string {
-	ret := `[`
+	if len(history) == 0 {
+		return "[]"
+	}
+	ret := "[\n"
 	for _, m := range history {
 		if m.Role == "user" {
 			ret += fmt.Sprintf("user: %s\n", m.Content)
@@ -123,7 +127,10 @@ func HistoryToString() string {
 }
 
 func ForceListToString() string {
-	ret := `[`
+	if len(forceList) == 0 {
+		return "[]"
+	}
+	ret := "[\n"
 	for _, e := range forceList {
 		ret += fmt.Sprintf("%s\n", e)
 	}
@@ -137,7 +144,6 @@ func ArgueGen(s []openai.ChatCompletionMessage) []openai.ChatCompletionMessage {
 		Content: fmt.Sprintf(PromptArgue_GenReply, HistoryToString(), ForceListToString()),
 	}
 	last := s[len(s)-1]
-	// TODO: <drawgun: >
 	if last.Role != openai.ChatMessageRoleUser {
 		panic(`last.Role != openai.ChatMessageRoleUser`)
 	}

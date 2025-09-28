@@ -4,23 +4,24 @@ import (
 	"cos/conf"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	openai "github.com/sashabaranov/go-openai"
 	"net/http"
+	"strings"
 )
 
 func main() {
-	gin.SetMode(gin.DebugMode)
-	r := NewRouter()
-
-	err := r.Run(conf.GlobalConfig.Server.Addr)
+	err := godotenv.Load()
 	if err != nil {
 		panic(err)
 	}
-}
+	gin.SetMode(gin.DebugMode)
+	r := NewRouter()
 
-type TestMaskPayload struct {
-	M0 string `json:"m0"`
-	M1 string `json:"m1"`
+	err = r.Run(conf.GlobalConfig.Server.Addr)
+	if err != nil {
+		panic(err)
+	}
 }
 
 type ModelPayload struct {
@@ -92,6 +93,8 @@ func NewRouter() *gin.Engine {
 	return r
 }
 
+const drawGunCommand = "drawgun: "
+
 func argueHandler(context *gin.Context) {
 	var arg openai.ChatCompletionRequest
 	if err := context.BindJSON(&arg); err != nil {
@@ -112,11 +115,39 @@ func argueHandler(context *gin.Context) {
 	if last.Role != openai.ChatMessageRoleUser {
 		panic(`last.Role != openai.ChatMessageRoleUser`)
 	}
+	if strings.HasPrefix(last.Content, drawGunCommand) {
+		forceList = append(forceList, strings.TrimPrefix(last.Content, drawGunCommand))
+		context.JSON(http.StatusOK, openai.ChatCompletionResponse{
+			ID:      "",
+			Object:  "",
+			Created: 0,
+			Model:   "",
+			Choices: []openai.ChatCompletionChoice{
+				{
+					Index: 0,
+					Message: openai.ChatCompletionMessage{
+						Role: "assistant",
+						Content: string(MustMarshal(finalResp{
+							ReplyEng: "ok",
+							ReplyChs: "好好好",
+						})),
+					},
+					FinishReason: "",
+				},
+			},
+			Usage:               openai.Usage{},
+			SystemFingerprint:   "",
+			PromptFilterResults: nil,
+		})
+		return
+	}
+
 	history = append(history, Msg{
 		Role:    openai.ChatMessageRoleAssistant,
 		Content: last.Content,
 	})
 	defer println(fmt.Sprintf(" %s", HistoryToString()))
+	defer println(fmt.Sprintf(" %s", ForceListToString()))
 	//session, ok := sessionStore[s.SessionId]
 	//if !ok {
 	//	println(fmt.Sprintf(`sessionid=%s not found in sessionStore`, s.SessionId))
@@ -145,7 +176,8 @@ func argueHandler(context *gin.Context) {
 		UserMsgEng string `json:"user_msg_eng"`
 		DebateMode bool   `json:"debate_mode"`
 		ReplyLen   int    `json:"reply_len"`
-		Reply      string `json:"reply"`
+		ReplyEng   string `json:"reply_eng"`
+		ReplyChs   string `json:"reply_chs"`
 	}
 	genResp := ArgueGenResp{}
 	MustUnmarshal([]byte(Resp(llmRes)), &genResp)
@@ -162,8 +194,8 @@ func argueHandler(context *gin.Context) {
 						Role: "assistant",
 						Content: string(MustMarshal(finalResp{
 							//UserMsgEng: genResp.UserMsgEng,
-							ReplyEng: genResp.Reply,
-							ReplyChs: "",
+							ReplyEng: genResp.ReplyEng,
+							ReplyChs: genResp.ReplyChs,
 						})),
 					},
 					FinishReason: "",
@@ -176,7 +208,7 @@ func argueHandler(context *gin.Context) {
 		return
 	}
 
-	payload0 := ArgueRefine(genResp.Reply, genResp.ReplyLen)
+	payload0 := ArgueRefine(genResp.ReplyEng, genResp.ReplyLen)
 	println(fmt.Sprintf(" %+v", payload0))
 	llmRes0 := MustLLM(
 		"https://aihubmix.com/v1/chat/completions",
