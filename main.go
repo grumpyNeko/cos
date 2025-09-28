@@ -7,8 +7,12 @@ import (
 	"github.com/joho/godotenv"
 	openai "github.com/sashabaranov/go-openai"
 	"net/http"
+	"os"
 	"strings"
 )
+
+var apikey = os.Getenv("OPENAI_API_KEY")
+var baseURL = os.Getenv("OPENAI_API_KEY")
 
 func main() {
 	err := godotenv.Load()
@@ -46,11 +50,13 @@ func NewRouter() *gin.Engine {
 			if s.MaskName != "translate" {
 				panic(`s.MaskName != "translate"`)
 			}
-			// todo: s.SessionId
-			last := arg.Messages[len(arg.Messages)-1] // todo: 只取最后一个user message
+			last := arg.Messages[len(arg.Messages)-1]
+			if last.Role != openai.ChatMessageRoleUser {
+				panic(`last.Role != openai.ChatMessageRoleUser`)
+			}
 			llmRes := MustLLM(
-				"https://aihubmix.com/v1/chat/completions",
-				"sk-4JGSa4uexQfH6VIjD366C77c11F74bC6Bd919dEb6055Dd31",
+				baseURL,
+				apikey,
 				openai.ChatCompletionRequest{
 					Model:    "gpt-5",
 					Stream:   false,
@@ -159,8 +165,8 @@ func argueHandler(context *gin.Context) {
 	payload := ArgueGen(arg.Messages)
 	println(fmt.Sprintf(" %+v", payload))
 	llmRes := MustLLM(
-		"https://aihubmix.com/v1/chat/completions",
-		"sk-4JGSa4uexQfH6VIjD366C77c11F74bC6Bd919dEb6055Dd31",
+		baseURL,
+		apikey,
 		openai.ChatCompletionRequest{
 			Model:    "gpt-5",
 			Stream:   false,
@@ -211,8 +217,8 @@ func argueHandler(context *gin.Context) {
 	payload0 := ArgueRefine(genResp.ReplyEng, genResp.ReplyLen)
 	println(fmt.Sprintf(" %+v", payload0))
 	llmRes0 := MustLLM(
-		"https://aihubmix.com/v1/chat/completions",
-		"sk-4JGSa4uexQfH6VIjD366C77c11F74bC6Bd919dEb6055Dd31",
+		baseURL,
+		apikey,
 		openai.ChatCompletionRequest{
 			Model:    "gpt-5",
 			Stream:   false,
