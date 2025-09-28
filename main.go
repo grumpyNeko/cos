@@ -2,6 +2,7 @@ package main
 
 import (
 	"cos/conf"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	openai "github.com/sashabaranov/go-openai"
 	"net/http"
@@ -101,7 +102,14 @@ func argueHandler(context *gin.Context) {
 	if s.MaskName != "argue" {
 		panic(`s.MaskName != "argue"`)
 	}
-
+	last := arg.Messages[len(arg.Messages)-1]
+	if last.Role != openai.ChatMessageRoleUser {
+		panic(`last.Role != openai.ChatMessageRoleUser`)
+	}
+	history = append(history, Msg{
+		Role:    openai.ChatMessageRoleAssistant,
+		Content: last.Content,
+	})
 	//session, ok := sessionStore[s.SessionId]
 	//if !ok {
 	//	println(fmt.Sprintf(`sessionid=%s not found in sessionStore`, s.SessionId))
@@ -109,24 +117,61 @@ func argueHandler(context *gin.Context) {
 	//}
 	//session.msgList = append(session.msgList, arg.Messages[len(arg.Messages)-1].Content)
 	//sessionStore[s.SessionId] = session
+
+	payload := ArgueGen(arg.Messages)
+	println(fmt.Sprintf(" %+v", payload))
 	llmRes := MustLLM(
 		"https://aihubmix.com/v1/chat/completions",
 		"sk-4JGSa4uexQfH6VIjD366C77c11F74bC6Bd919dEb6055Dd31",
 		openai.ChatCompletionRequest{
 			Model:    "gpt-5",
 			Stream:   false,
-			Messages: Argue(arg.Messages),
+			Messages: payload,
 			ResponseFormat: &openai.ChatCompletionResponseFormat{
 				Type: openai.ChatCompletionResponseFormatTypeJSONObject,
 			},
 			ReasoningEffort: "minimal",
 		},
 	)
-	payload := string(MustMarshal(TestMaskPayload{
-		M0: Resp(llmRes),
-		M1: "extra info",
-	}))
-	println(payload)
+	println(fmt.Sprintf(" %+v", llmRes))
+	type ArgueGenResp struct {
+		DebateMode bool   `json:"debate_mode"`
+		ReplyLen   int    `json:"reply_len"`
+		UserMsgEng string `json:"user_msg_eng"`
+		Reply      string `json:"reply"`
+	}
+	genResp := ArgueGenResp{}
+	MustUnmarshal([]byte(Resp(llmRes)), &genResp)
+
+	payload0 := ArgueRefine(genResp.Reply, genResp.ReplyLen)
+	println(fmt.Sprintf(" %+v", payload0))
+	llmRes0 := MustLLM(
+		"https://aihubmix.com/v1/chat/completions",
+		"sk-4JGSa4uexQfH6VIjD366C77c11F74bC6Bd919dEb6055Dd31",
+		openai.ChatCompletionRequest{
+			Model:    "gpt-5",
+			Stream:   false,
+			Messages: payload0,
+			ResponseFormat: &openai.ChatCompletionResponseFormat{
+				Type: openai.ChatCompletionResponseFormatTypeJSONObject,
+			},
+			ReasoningEffort: "minimal",
+		},
+	)
+	println(fmt.Sprintf(" %+v", llmRes0))
+	type ArgueRefineResp struct {
+		Weakness      string `json:"weakness"`
+		ShouldConcede bool   `json:"shouldConcede"`
+		TooLong       bool   `json:"tooLong"`
+		Reply         string `json:"reply"`
+	}
+	refineResp := ArgueRefineResp{}
+	MustUnmarshal([]byte(Resp(llmRes0)), &refineResp)
+
+	history = append(history, Msg{
+		Role:    openai.ChatMessageRoleAssistant,
+		Content: refineResp.Reply,
+	})
 	context.JSON(http.StatusOK, openai.ChatCompletionResponse{
 		ID:      "",
 		Object:  "",
@@ -137,7 +182,7 @@ func argueHandler(context *gin.Context) {
 				Index: 0,
 				Message: openai.ChatCompletionMessage{
 					Role:    "assistant",
-					Content: payload,
+					Content: refineResp.Reply,
 				},
 				FinishReason: "",
 			},
