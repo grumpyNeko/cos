@@ -66,13 +66,14 @@ history=%s
 注意事项=%s
 `
 
-//var sessionStore = make(map[string]Session)
-//
-//type Session struct {
-//	msgList  []Msg
-//	msgList0 []Msg
-//	sum      string
-//}
+var sessionStore = make(map[string]Session)
+
+// todo:
+type Session struct {
+	msgList           []Msg
+	compressedMsgList []Msg
+	forceList         []string
+}
 
 type Msg struct {
 	Role    string
