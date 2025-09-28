@@ -47,7 +47,7 @@ const PromptArgue_RefineReply0 = `
 func refine(reply, history)
   weakness, shouldConcede = 找出Assistant论据中最大的隐患 // weakness是1句话, shouldConcede表示user的观点难以反驳
   reply0 = 根据weakness和shouldConcede修改reply
-  reply1_eng = reply0口语化(模仿charlie尖锐的语气), 浓缩信息, 言简意赅, 根据情况在末尾增加反问
+  reply1_eng = reply0口语化(模仿charlie尖锐的语气), 尽最大努力浓缩信息
   reply1_chs = translate(reply1_eng)
   return {
     weakness, shouldConcede, reply0, reply1_eng, reply1_chs
