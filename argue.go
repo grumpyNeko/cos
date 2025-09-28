@@ -28,41 +28,41 @@ else
   reply = 正常回复
 
 ---
-历史对话:
-%s
-
+历史对话=%s
+注意事项=%s
 ---
 直接返回如下格式的JSON(no markdown):
 {
-  "debate_mode": true,
-  "reply_len": 3,
   "user_msg_eng": "..",
+  "debate_mode": true,
+  "reply_len": 2,
   "reply": "..",
 }
 `
 
-const PromptArgue_RefineReply = `
-一个rag正在扮演charlie kirk, 请对rag生成的对话进行评估, 返回json
-
-func refine(reply, expect_reply_len, history)
-  weakness = 找出Assistant论据中最大的隐患, 用1句话指出
-  shouldConcede = false
-  actual_reply_len = reply中有几句
-  tooLong = false
-  if 难以反驳user
-    shouldConcede = true
-    修改reply, 部分承认user的观点
-  if actual_reply_len > expect_reply_len || reply太冗余
-    tooLong = true
-    修改reply, 浓缩信息, 一针见血
-  return {
-    weakness, shouldConcede, tooLong, reply
-  }
-`
 const PromptArgue_RefineReply0 = `
+一个rag正在扮演charlie kirk, 请对优化rag生成的对话, 返回json
+
+func refine(reply, history)
+  weakness, shouldConcede = 找出Assistant论据中最大的隐患 // weakness是1句话, shouldConcede表示user的观点难以反驳
+  reply0 = 根据weakness和shouldConcede修改reply
+  reply1_eng = reply0口语化(模仿charlie尖锐的语气), 浓缩信息, 言简意赅, 根据情况在末尾增加反问
+  reply1_chs = translate(reply1_eng)
+  return {
+    weakness, shouldConcede, reply0, reply1_eng, reply1_chs
+  }
+
+example:
+"没错, 共同抚养确实不普遍, 我承认这一点。但看看更普遍的: 长期同居。他们一起租房、互为保险受益人。这种深度的财务捆绑和风险共担, 难道是普通朋友会做的吗？"
+简化为
+"好, 你说共同抚养不普遍, 那一起租房同居呢?"
+`
+
+const PromptArgue_RefineReply1 = `
 reply=%s
 expect_reply_len=%d
 history=%s
+注意事项=%s
 `
 
 //var sessionStore = make(map[string]Session)
@@ -79,30 +79,34 @@ type Msg struct {
 }
 
 var history = []Msg{
-	{
-		Role:    openai.ChatMessageRoleUser,
-		Content: "如果男女朋友没有性行为, 和普通朋友有什么本质区别",
-	},
-	{
-		Role:    openai.ChatMessageRoleAssistant,
-		Content: "承诺、排他性、共同规划未来，这些是普通朋友没有的；订婚情侣长期异地也可能零性行为，但关系本质不同。税务与法律层面也不同：伴侣常共同理财、共同租房、紧急联系人、医疗决策授权。看看数据：婚前禁欲的宗教情侣依然有明显更高的同居率、资源整合与家庭网络绑定，这不是普通友情。",
-	},
-	{
-		Role:    openai.ChatMessageRoleUser,
-		Content: "如果两人不结婚也没性关系, 请问两人是什么关系",
-	},
-	{
-		Role:    openai.ChatMessageRoleAssistant,
-		Content: "合伙创业的情侣、共同抚养孩子的伴侣、签署医疗与财务授权的伴侣，全部不是“普通朋友”。同居伴侣在多国法律下享有税务与继承安排，却可能选择禁欲",
-	},
-	{
-		Role:    openai.ChatMessageRoleUser,
-		Content: `所谓"合伙创业"没有说服力, "共同抚养"和"医疗与财务授权"并不普遍`,
-	},
-	{
-		Role:    openai.ChatMessageRoleAssistant,
-		Content: `不需要普遍才构成反例：长期同居的未婚伴侣在房贷联名、租约、紧急联系人、保险受益人上极其常见，已足以把他们与普通朋友区分。美国有数百万同居伴侣提交联合财务、共同抚养宠物与分工照护老人，这些资源整合与风险共担不是友情`,
-	},
+	//{
+	//	Role:    openai.ChatMessageRoleUser,
+	//	Content: "如果男女朋友没有性行为, 和普通朋友有什么本质区别",
+	//},
+	//{
+	//	Role:    openai.ChatMessageRoleAssistant,
+	//	Content: "承诺、排他性、共同规划未来，这些是普通朋友没有的；订婚情侣长期异地也可能零性行为，但关系本质不同。税务与法律层面也不同：伴侣常共同理财、共同租房、紧急联系人、医疗决策授权。看看数据：婚前禁欲的宗教情侣依然有明显更高的同居率、资源整合与家庭网络绑定，这不是普通友情。",
+	//},
+	//{
+	//	Role:    openai.ChatMessageRoleUser,
+	//	Content: "如果两人不结婚也没性关系, 请问两人是什么关系",
+	//},
+	//{
+	//	Role:    openai.ChatMessageRoleAssistant,
+	//	Content: "合伙创业的情侣、共同抚养孩子的伴侣、签署医疗与财务授权的伴侣，全部不是“普通朋友”。同居伴侣在多国法律下享有税务与继承安排，却可能选择禁欲",
+	//},
+	//{
+	//	Role:    openai.ChatMessageRoleUser,
+	//	Content: `所谓"合伙创业"没有说服力, "共同抚养"和"医疗与财务授权"并不普遍`,
+	//},
+	//{
+	//	Role:    openai.ChatMessageRoleAssistant,
+	//	Content: `不需要普遍才构成反例：长期同居的未婚伴侣在房贷联名、租约、紧急联系人、保险受益人上极其常见，已足以把他们与普通朋友区分。美国有数百万同居伴侣提交联合财务、共同抚养宠物与分工照护老人，这些资源整合与风险共担不是友情`,
+	//},
+}
+
+var forceList = []string{
+	//"只讨论不打算结婚的情况",
 }
 
 func HistoryToString() string {
@@ -118,12 +122,22 @@ func HistoryToString() string {
 	return ret
 }
 
+func ForceListToString() string {
+	ret := `[`
+	for _, e := range forceList {
+		ret += fmt.Sprintf("%s\n", e)
+	}
+	ret += `]`
+	return ret
+}
+
 func ArgueGen(s []openai.ChatCompletionMessage) []openai.ChatCompletionMessage {
 	first := openai.ChatCompletionMessage{
 		Role:    openai.ChatMessageRoleSystem,
-		Content: fmt.Sprintf(PromptArgue_GenReply, HistoryToString()),
+		Content: fmt.Sprintf(PromptArgue_GenReply, HistoryToString(), ForceListToString()),
 	}
 	last := s[len(s)-1]
+	// TODO: <drawgun: >
 	if last.Role != openai.ChatMessageRoleUser {
 		panic(`last.Role != openai.ChatMessageRoleUser`)
 	}
@@ -141,11 +155,11 @@ func ArgueRefine(reply string, expect_reply_len int) []openai.ChatCompletionMess
 	return []openai.ChatCompletionMessage{
 		openai.ChatCompletionMessage{
 			Role:    openai.ChatMessageRoleSystem,
-			Content: PromptArgue_RefineReply,
+			Content: PromptArgue_RefineReply0,
 		},
 		openai.ChatCompletionMessage{
 			Role:    openai.ChatMessageRoleUser,
-			Content: fmt.Sprintf(PromptArgue_RefineReply0, reply, expect_reply_len, HistoryToString()),
+			Content: fmt.Sprintf(PromptArgue_RefineReply1, reply, expect_reply_len, HistoryToString(), ForceListToString()),
 		},
 	}
 }

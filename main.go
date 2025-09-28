@@ -99,8 +99,14 @@ func argueHandler(context *gin.Context) {
 	}
 	s := ModelPayload{}
 	MustUnmarshal([]byte(arg.Model), &s)
-	if s.MaskName != "argue" {
-		panic(`s.MaskName != "argue"`)
+	if s.MaskName != "Charlie" {
+		panic(fmt.Sprintf(`s.MaskName != "Charlie" // s.MaskName is %s`, s.MaskName))
+	}
+
+	type finalResp struct {
+		//UserMsgEng string `json:"user_msg_eng"`
+		ReplyEng string `json:"reply_eng"`
+		ReplyChs string `json:"reply_chs"`
 	}
 	last := arg.Messages[len(arg.Messages)-1]
 	if last.Role != openai.ChatMessageRoleUser {
@@ -110,6 +116,7 @@ func argueHandler(context *gin.Context) {
 		Role:    openai.ChatMessageRoleAssistant,
 		Content: last.Content,
 	})
+	defer println(fmt.Sprintf(" %s", HistoryToString()))
 	//session, ok := sessionStore[s.SessionId]
 	//if !ok {
 	//	println(fmt.Sprintf(`sessionid=%s not found in sessionStore`, s.SessionId))
@@ -135,13 +142,39 @@ func argueHandler(context *gin.Context) {
 	)
 	println(fmt.Sprintf(" %+v", llmRes))
 	type ArgueGenResp struct {
+		UserMsgEng string `json:"user_msg_eng"`
 		DebateMode bool   `json:"debate_mode"`
 		ReplyLen   int    `json:"reply_len"`
-		UserMsgEng string `json:"user_msg_eng"`
 		Reply      string `json:"reply"`
 	}
 	genResp := ArgueGenResp{}
 	MustUnmarshal([]byte(Resp(llmRes)), &genResp)
+	if !genResp.DebateMode {
+		context.JSON(http.StatusOK, openai.ChatCompletionResponse{
+			ID:      "",
+			Object:  "",
+			Created: 0,
+			Model:   "",
+			Choices: []openai.ChatCompletionChoice{
+				{
+					Index: 0,
+					Message: openai.ChatCompletionMessage{
+						Role: "assistant",
+						Content: string(MustMarshal(finalResp{
+							//UserMsgEng: genResp.UserMsgEng,
+							ReplyEng: genResp.Reply,
+							ReplyChs: "",
+						})),
+					},
+					FinishReason: "",
+				},
+			},
+			Usage:               openai.Usage{},
+			SystemFingerprint:   "",
+			PromptFilterResults: nil,
+		})
+		return
+	}
 
 	payload0 := ArgueRefine(genResp.Reply, genResp.ReplyLen)
 	println(fmt.Sprintf(" %+v", payload0))
@@ -162,16 +195,18 @@ func argueHandler(context *gin.Context) {
 	type ArgueRefineResp struct {
 		Weakness      string `json:"weakness"`
 		ShouldConcede bool   `json:"shouldConcede"`
-		TooLong       bool   `json:"tooLong"`
-		Reply         string `json:"reply"`
+		Reply0        string `json:"reply0"`
+		Reply1Eng     string `json:"reply1_eng"`
+		Reply1Chs     string `json:"reply1_chs"`
 	}
 	refineResp := ArgueRefineResp{}
 	MustUnmarshal([]byte(Resp(llmRes0)), &refineResp)
 
 	history = append(history, Msg{
 		Role:    openai.ChatMessageRoleAssistant,
-		Content: refineResp.Reply,
+		Content: refineResp.Reply1Eng,
 	})
+
 	context.JSON(http.StatusOK, openai.ChatCompletionResponse{
 		ID:      "",
 		Object:  "",
@@ -181,8 +216,12 @@ func argueHandler(context *gin.Context) {
 			{
 				Index: 0,
 				Message: openai.ChatCompletionMessage{
-					Role:    "assistant",
-					Content: refineResp.Reply,
+					Role: "assistant",
+					Content: string(MustMarshal(finalResp{
+						UserMsgEng: genResp.UserMsgEng,
+						ReplyEng:   refineResp.Reply1Eng,
+						ReplyChs:   refineResp.Reply1Chs,
+					})),
 				},
 				FinishReason: "",
 			},
